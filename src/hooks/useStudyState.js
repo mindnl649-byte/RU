@@ -3,6 +3,7 @@ import { doc, onSnapshot, serverTimestamp, setDoc, getDoc } from "firebase/fires
 import { db } from "../lib/firebase.js";
 import { createDefaultState } from "../data/defaultState.js";
 import { CHECKLIST } from "../data/subjects.js";
+import { sortSemesters } from "../utils/semesters.js";
 
 const LOCAL_KEY = "studypath.study-state.v3";
 const FIRESTORE_COLLECTION = "users";
@@ -302,13 +303,15 @@ export function useStudyState(user) {
       delete semesters[semesterId];
       delete subjectsBySemester[semesterId];
 
+      const nextActiveSemesterId =
+        current.activeSemesterId === semesterId ? sortSemesters(semesters)[0]?.id : current.activeSemesterId;
+
       return {
         ...current,
         semesters,
         subjectsBySemester,
         subjects,
-        activeSemesterId:
-          current.activeSemesterId === semesterId ? Object.keys(semesters)[0] : current.activeSemesterId,
+        activeSemesterId: nextActiveSemesterId,
       };
     });
   }

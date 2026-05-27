@@ -6,6 +6,7 @@ import { getEnrichedSubjects } from "../utils/calculations.js";
 import { SemesterManager } from "../components/SemesterManager.jsx";
 import { SubjectCard } from "../components/SubjectCard.jsx";
 import { SubjectEditDrawer } from "../components/SubjectEditDrawer.jsx";
+import { getActiveSemester } from "../utils/semesters.js";
 
 export function Subjects({
   studyState,
@@ -43,7 +44,7 @@ export function Subjects({
 
   const subjects = getSubjects();
   const activeSemester = studyState?.semesters
-    ? Object.values(studyState.semesters || {}).find((s) => s.isActive)
+    ? getActiveSemester(studyState.semesters, studyState.activeSemesterId)
     : null;
 
   // Handler functions for new system

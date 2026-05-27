@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { getDailyPlan, getEnrichedSubjects, getGraduationStats } from "../utils/calculations.js";
 import { calculateSemesterStats, calculateSemesterGPA, prioritizeSubjects } from "../utils/semesterStats.js";
+import { getActiveSemester } from "../utils/semesters.js";
 
 export function Dashboard({
   studyState,
@@ -20,7 +21,7 @@ export function Dashboard({
   if (useNewSystem && getActiveSubjects) {
     subjects = getActiveSubjects();
     semesterStats = calculateSemesterStats(subjects);
-    activeSemester = Object.values(studyState.semesters || {}).find((s) => s.isActive);
+    activeSemester = getActiveSemester(studyState.semesters, studyState.activeSemesterId);
   } else {
     // Legacy system
     subjects = getEnrichedSubjects(studyState);

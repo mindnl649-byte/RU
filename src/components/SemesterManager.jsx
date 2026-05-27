@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
+import { getActiveSemester, sortSemesters } from "../utils/semesters.js";
 
 export function SemesterManager({ semesters, activeSemesterId, onCreateSemester, onDeleteSemester, onSwitchSemester, onEditSemester }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,7 +18,8 @@ export function SemesterManager({ semesters, activeSemesterId, onCreateSemester,
     }
   };
 
-  const activeSemester = Object.values(semesters || {}).find((s) => s.isActive);
+  const sortedSemesters = sortSemesters(semesters);
+  const activeSemester = getActiveSemester(semesters, activeSemesterId);
 
   return (
     <div className="space-y-3">
@@ -39,7 +41,7 @@ export function SemesterManager({ semesters, activeSemesterId, onCreateSemester,
 
       {/* Semester tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2">
-        {Object.values(semesters || {}).map((semester) => (
+        {sortedSemesters.map((semester) => (
           <button
             key={semester.id}
             onClick={() => onSwitchSemester(semester.id)}
