@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { doc, onSnapshot, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase.js";
 import { createDefaultState } from "../data/defaultState.js";
@@ -69,6 +69,8 @@ export function useStudyState(user) {
   const [studyState, setStudyState] = useState(() => readLocalState());
   const [syncStatus, setSyncStatus] = useState(user ? "loading" : "local");
   const [cloudReady, setCloudReady] = useState(false);
+  const lastCloudStateRef = useRef("");
+  const saveTimerRef = useRef(null);
 
   const docRef = useMemo(() => {
     if (!db || !user) return null;
@@ -94,6 +96,7 @@ export function useStudyState(user) {
       async (snapshot) => {
         if (snapshot.exists()) {
           const firestoreState = snapshot.data().state;
+          lastCloudStateRef.current = JSON.stringify(firestoreState);
           setStudyState(firestoreState);
           writeLocalState(firestoreState);
           setCloudReady(true);
@@ -104,6 +107,7 @@ export function useStudyState(user) {
           setStudyState(localState);
           try {
             await writeFirestoreState(user.uid, localState);
+            lastCloudStateRef.current = JSON.stringify(localState);
             setCloudReady(true);
             setSyncStatus("synced");
           } catch (err) {
@@ -128,13 +132,30 @@ export function useStudyState(user) {
 
     if (!user || !cloudReady || !docRef) return;
 
-    const timeout = window.setTimeout(async () => {
+    const serializedState = JSON.stringify(studyState);
+    if (serializedState === lastCloudStateRef.current) {
+      setSyncStatus("synced");
+      return;
+    }
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(async () => {
       setSyncStatus("saving");
       const success = await writeFirestoreState(user.uid, studyState);
+      if (success) {
+        lastCloudStateRef.current = serializedState;
+      }
       setSyncStatus(success ? "synced" : "offline");
-    }, 500);
+    }, 250);
 
-    return () => window.clearTimeout(timeout);
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
   }, [studyState, user, cloudReady, docRef]);
 
   function updateStudyState(updater) {
