@@ -66,6 +66,16 @@ async function writeFirestoreState(userId, state) {
   }
 }
 
+function applyCloudState(cloudState, setters) {
+  setters.lastCloudStateRef.current = JSON.stringify(cloudState);
+  setters.setStudyState(cloudState);
+  writeLocalState(cloudState);
+  setters.setCloudReady(true);
+  setters.setSyncStatus("synced");
+  setters.setSyncError("");
+  setters.setLastSyncedAt(new Date().toISOString());
+}
+
 export function useStudyState(user) {
   const [studyState, setStudyState] = useState(() => readLocalState());
   const [syncStatus, setSyncStatus] = useState(user ? "loading" : "local");
@@ -100,16 +110,41 @@ export function useStudyState(user) {
     setSyncStatus("loading");
     setSyncError("");
 
-    const loadingTimeout = window.setTimeout(() => {
-      setSyncStatus((current) => {
-        if (current === "loading") {
-          setSyncError(
-            "Cloud is taking too long to respond. Check Firestore rules, authorized domains, or tap Sync now."
-          );
-          return "offline";
+    const loadingTimeout = window.setTimeout(async () => {
+      try {
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          applyCloudState(snapshot.data().state, {
+            lastCloudStateRef,
+            setCloudReady,
+            setLastSyncedAt,
+            setStudyState,
+            setSyncError,
+            setSyncStatus,
+          });
+          return;
         }
-        return current;
-      });
+
+        const localState = readLocalState();
+        const result = await writeFirestoreState(user.uid, localState);
+        if (result.success) {
+          applyCloudState(localState, {
+            lastCloudStateRef,
+            setCloudReady,
+            setLastSyncedAt,
+            setStudyState,
+            setSyncError,
+            setSyncStatus,
+          });
+          return;
+        }
+
+        setSyncStatus("offline");
+        setSyncError(result.error);
+      } catch (err) {
+        setSyncStatus("offline");
+        setSyncError(err.message || "Cloud is taking too long to respond.");
+      }
     }, CLOUD_LOAD_TIMEOUT_MS);
 
     const unsubscribe = onSnapshot(
@@ -118,25 +153,28 @@ export function useStudyState(user) {
         window.clearTimeout(loadingTimeout);
         if (snapshot.exists()) {
           const firestoreState = snapshot.data().state;
-          lastCloudStateRef.current = JSON.stringify(firestoreState);
-          setStudyState(firestoreState);
-          writeLocalState(firestoreState);
-
-          setCloudReady(true);
-          setSyncStatus("synced");
-          setSyncError("");
-          setLastSyncedAt(new Date().toISOString());
+          applyCloudState(firestoreState, {
+            lastCloudStateRef,
+            setCloudReady,
+            setLastSyncedAt,
+            setStudyState,
+            setSyncError,
+            setSyncStatus,
+          });
         } else {
           // First time user - upload local state to Firestore
           const localState = readLocalState();
           setStudyState(localState);
           const result = await writeFirestoreState(user.uid, localState);
           if (result.success) {
-            lastCloudStateRef.current = JSON.stringify(localState);
-            setCloudReady(true);
-            setSyncStatus("synced");
-            setSyncError("");
-            setLastSyncedAt(new Date().toISOString());
+            applyCloudState(localState, {
+              lastCloudStateRef,
+              setCloudReady,
+              setLastSyncedAt,
+              setStudyState,
+              setSyncError,
+              setSyncStatus,
+            });
           } else {
             setSyncStatus("offline");
             setSyncError(result.error);
