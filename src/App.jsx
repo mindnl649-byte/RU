@@ -19,7 +19,11 @@ export function App() {
   const {
     studyState,
     syncStatus,
+    syncError,
+    lastSyncedAt,
     updateStudyState,
+    saveCloudNow,
+    loadCloudNow,
     updateSubject,
     addSubject,
     editSubject,
@@ -91,27 +95,18 @@ export function App() {
   return (
     <>
       <Shell activePage={activePage} setActivePage={setActivePage} syncStatus={syncStatus} user={user}>
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink-500">
-            {user ? `${t("common.signInAs")} ${user.isAnonymous ? t("common.guest") : user.email || user.displayName}` : t("common.localMode")}
-          </p>
-          {user && (
-            <button className="btn-ghost" onClick={logout}>
-              {t("common.signOut")}
-            </button>
-          )}
-          {!user && localOnly && (
-            <button
-              className="btn-ghost"
-              onClick={() => {
-                localStorage.removeItem("studypath.local-only");
-                setLocalOnly(false);
-              }}
-            >
-              {t("common.enableCloudSync")}
-            </button>
-          )}
-        </div>
+        <SyncBar
+          lastSyncedAt={lastSyncedAt}
+          loadCloudNow={loadCloudNow}
+          localOnly={localOnly}
+          logout={logout}
+          saveCloudNow={saveCloudNow}
+          setLocalOnly={setLocalOnly}
+          syncError={syncError}
+          syncStatus={syncStatus}
+          t={t}
+          user={user}
+        />
         {page}
       </Shell>
       {!localOnly && (
@@ -123,5 +118,72 @@ export function App() {
         />
       )}
     </>
+  );
+}
+
+function SyncBar({
+  lastSyncedAt,
+  loadCloudNow,
+  localOnly,
+  logout,
+  saveCloudNow,
+  setLocalOnly,
+  syncError,
+  syncStatus,
+  t,
+  user,
+}) {
+  const syncLabel = user
+    ? `${t("common.signInAs")} ${user.isAnonymous ? t("common.guest") : user.email || user.displayName}`
+    : t("common.localMode");
+  const lastSyncedLabel = lastSyncedAt
+    ? `Last sync ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+    : "Not synced yet";
+
+  return (
+    <div className="mb-5 rounded-2xl border border-ink-900/10 bg-paper-50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-ink-700">{syncLabel}</p>
+          <p className="mt-0.5 text-xs text-ink-500">
+            Cloud status: <span className="font-semibold">{syncStatus}</span>
+            {user && ` - ${lastSyncedLabel}`}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {user && (
+            <>
+              <button className="btn-secondary rounded-lg px-3 py-2 text-xs" onClick={loadCloudNow}>
+                Load cloud
+              </button>
+              <button className="btn-primary rounded-lg px-3 py-2 text-xs" onClick={saveCloudNow}>
+                Sync now
+              </button>
+              <button className="btn-ghost rounded-lg px-3 py-2 text-xs" onClick={logout}>
+                {t("common.signOut")}
+              </button>
+            </>
+          )}
+          {!user && localOnly && (
+            <button
+              className="btn-ghost rounded-lg px-3 py-2 text-xs"
+              onClick={() => {
+                localStorage.removeItem("studypath.local-only");
+                setLocalOnly(false);
+              }}
+            >
+              {t("common.enableCloudSync")}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {syncError && (
+        <p className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-800">
+          Sync problem: {syncError}
+        </p>
+      )}
+    </div>
   );
 }

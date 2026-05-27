@@ -46,7 +46,7 @@ async function readFirestoreState(userId) {
 }
 
 async function writeFirestoreState(userId, state) {
-  if (!db || !userId) return false;
+  if (!db || !userId) return { success: false, error: "Firebase is not configured." };
   try {
     const docRef = doc(db, FIRESTORE_COLLECTION, userId, "data", FIRESTORE_DOC);
     await setDoc(
@@ -58,16 +58,18 @@ async function writeFirestoreState(userId, state) {
       },
       { merge: true }
     );
-    return true;
+    return { success: true, error: "" };
   } catch (err) {
     console.error("Error writing to Firestore:", err);
-    return false;
+    return { success: false, error: err.message || "Unable to save to cloud." };
   }
 }
 
 export function useStudyState(user) {
   const [studyState, setStudyState] = useState(() => readLocalState());
   const [syncStatus, setSyncStatus] = useState(user ? "loading" : "local");
+  const [syncError, setSyncError] = useState("");
+  const [lastSyncedAt, setLastSyncedAt] = useState("");
   const [cloudReady, setCloudReady] = useState(false);
   const lastCloudStateRef = useRef("");
   const saveTimerRef = useRef(null);
@@ -101,17 +103,22 @@ export function useStudyState(user) {
           writeLocalState(firestoreState);
           setCloudReady(true);
           setSyncStatus("synced");
+          setSyncError("");
+          setLastSyncedAt(new Date().toISOString());
         } else {
           // First time user - upload local state to Firestore
           const localState = readLocalState();
           setStudyState(localState);
-          try {
-            await writeFirestoreState(user.uid, localState);
+          const result = await writeFirestoreState(user.uid, localState);
+          if (result.success) {
             lastCloudStateRef.current = JSON.stringify(localState);
             setCloudReady(true);
             setSyncStatus("synced");
-          } catch (err) {
+            setSyncError("");
+            setLastSyncedAt(new Date().toISOString());
+          } else {
             setSyncStatus("offline");
+            setSyncError(result.error);
             setCloudReady(false);
           }
         }
@@ -119,6 +126,7 @@ export function useStudyState(user) {
       (err) => {
         console.error("Firestore listener error:", err);
         setSyncStatus("offline");
+        setSyncError(err.message || "Unable to listen for cloud updates.");
         setCloudReady(false);
       }
     );
@@ -144,11 +152,14 @@ export function useStudyState(user) {
 
     saveTimerRef.current = window.setTimeout(async () => {
       setSyncStatus("saving");
-      const success = await writeFirestoreState(user.uid, studyState);
-      if (success) {
+      const result = await writeFirestoreState(user.uid, studyState);
+      if (result.success) {
         lastCloudStateRef.current = serializedState;
+        setSyncError("");
+        setLastSyncedAt(new Date().toISOString());
       }
-      setSyncStatus(success ? "synced" : "offline");
+      setSyncStatus(result.success ? "synced" : "offline");
+      if (!result.success) setSyncError(result.error);
     }, 250);
 
     return () => {
@@ -161,8 +172,71 @@ export function useStudyState(user) {
   function updateStudyState(updater) {
     setStudyState((current) => {
       const next = typeof updater === "function" ? updater(current) : { ...current, ...updater };
-      return next;
+      return {
+        ...next,
+        updatedAt: new Date().toISOString(),
+      };
     });
+  }
+
+  async function saveCloudNow() {
+    if (!user || !docRef) {
+      setSyncStatus("local");
+      setSyncError("Sign in before syncing.");
+      return false;
+    }
+
+    setSyncStatus("saving");
+    const stateToSave = {
+      ...studyState,
+      updatedAt: new Date().toISOString(),
+    };
+    const result = await writeFirestoreState(user.uid, stateToSave);
+    if (result.success) {
+      lastCloudStateRef.current = JSON.stringify(stateToSave);
+      setStudyState(stateToSave);
+      writeLocalState(stateToSave);
+      setSyncStatus("synced");
+      setSyncError("");
+      setLastSyncedAt(new Date().toISOString());
+      return true;
+    }
+
+    setSyncStatus("offline");
+    setSyncError(result.error);
+    return false;
+  }
+
+  async function loadCloudNow() {
+    if (!user || !docRef) {
+      setSyncStatus("local");
+      setSyncError("Sign in before loading cloud data.");
+      return false;
+    }
+
+    setSyncStatus("loading");
+    try {
+      const snapshot = await getDoc(docRef);
+      if (!snapshot.exists()) {
+        setSyncStatus("offline");
+        setSyncError("No cloud study data exists yet. Save this device to cloud first.");
+        return false;
+      }
+
+      const cloudState = snapshot.data().state;
+      lastCloudStateRef.current = JSON.stringify(cloudState);
+      setStudyState(cloudState);
+      writeLocalState(cloudState);
+      setCloudReady(true);
+      setSyncStatus("synced");
+      setSyncError("");
+      setLastSyncedAt(new Date().toISOString());
+      return true;
+    } catch (err) {
+      setSyncStatus("offline");
+      setSyncError(err.message || "Unable to load cloud data.");
+      return false;
+    }
   }
 
   // ========== Legacy subject functions (backward compatible) ==========
@@ -476,7 +550,11 @@ export function useStudyState(user) {
   return {
     studyState,
     syncStatus,
+    syncError,
+    lastSyncedAt,
     updateStudyState,
+    saveCloudNow,
+    loadCloudNow,
     // Legacy functions
     updateSubject,
     addSubject,
