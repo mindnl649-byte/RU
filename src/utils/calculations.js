@@ -4,13 +4,20 @@ import { TOTAL_CREDITS_REQUIRED } from "../data/defaultState.js";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function subjectProgress(subject, stateForSubject) {
-  if (stateForSubject?.status === "passed") return 100;
+  if (stateForSubject?.status === "passed" || stateForSubject?.status === "completed") return 100;
+  if (typeof stateForSubject?.progress === "number") {
+    return Math.max(0, Math.min(100, Math.round(stateForSubject.progress)));
+  }
   const checklist = stateForSubject?.checklist || {};
   const done = CHECKLIST.filter((item) => checklist[item]).length;
   return Math.round((done / CHECKLIST.length) * 100);
 }
 
 export function getEnrichedSubjects(studyState) {
+  if (studyState?.semesters && studyState?.subjectsBySemester) {
+    return getSemesterSystemSubjects(studyState);
+  }
+
   // Get subject list from metadata, fallback to MASTER_SUBJECTS if not defined
   const subjectMetadata = studyState.subjectMetadata || {};
   const subjectCodes = Object.keys(studyState.subjects || {});
@@ -43,19 +50,59 @@ export function getEnrichedSubjects(studyState) {
   });
 }
 
+function getSemesterSystemSubjects(studyState) {
+  const subjects = studyState.subjects || {};
+  const semesters = studyState.semesters || {};
+  const subjectsBySemester = studyState.subjectsBySemester || {};
+
+  return Object.entries(subjectsBySemester).flatMap(([semesterId, subjectIds]) => {
+    const semester = semesters[semesterId];
+    const semesterName = semester?.name || semester?.displayName || "Unplanned";
+
+    return (subjectIds || [])
+      .map((subjectId) => subjects[subjectId])
+      .filter(Boolean)
+      .map((subject) => {
+        const progressPercentage = subjectProgress(subject, subject);
+        const totalVideos = Number(subject.totalVideos || 0);
+        const videosWatched = Number(subject.videosWatched || 0);
+        const estimatedStudyHours = Number(subject.estimatedStudyHours || 40);
+
+        return {
+          ...subject,
+          name: subject.name || subject.title,
+          title: subject.title || subject.name,
+          semester: subject.semester || semesterName,
+          semesterId,
+          credits: Number(subject.credits || 0),
+          estimatedStudyHours,
+          totalVideos,
+          videosWatched,
+          progressPercentage,
+          remainingVideos: Math.max(totalVideos - videosWatched, 0),
+          remainingStudyHours: Math.max(
+            Math.ceil(estimatedStudyHours * (1 - progressPercentage / 100)),
+            0
+          ),
+        };
+      });
+  });
+}
+
 export function getGraduationStats(studyState) {
   const enriched = getEnrichedSubjects(studyState);
+  const baseCompletedCredits = Number(studyState.completedCreditsBase || 0);
   const passedFutureCredits = enriched
-    .filter((subject) => subject.status === "passed")
+    .filter((subject) => subject.status === "passed" || subject.status === "completed")
     .reduce((sum, subject) => sum + subject.credits, 0);
   const completedCredits = Math.min(
     TOTAL_CREDITS_REQUIRED,
-    Number(studyState.completedCreditsBase || 0) + passedFutureCredits
+    baseCompletedCredits + passedFutureCredits
   );
   const remainingCredits = Math.max(TOTAL_CREDITS_REQUIRED - completedCredits, 0);
   const graduationPercentage = Number(((completedCredits / TOTAL_CREDITS_REQUIRED) * 100).toFixed(1));
 
-  let cumulative = completedCredits;
+  let cumulative = baseCompletedCredits;
   const semesters = SEMESTERS.map((semester) => {
     const subjects = enriched.filter((subject) => subject.semester === semester);
     const credits = subjects.reduce((sum, subject) => sum + subject.credits, 0);
@@ -88,7 +135,7 @@ export function getGraduationStats(studyState) {
 export function getDailyPlan(studyState) {
   const enriched = getEnrichedSubjects(studyState);
   const activeSubjects = enriched
-    .filter((subject) => subject.status !== "passed")
+    .filter((subject) => subject.status !== "passed" && subject.status !== "completed")
     .sort((a, b) => b.remainingStudyHours - a.remainingStudyHours);
   const remainingVideos = activeSubjects.reduce((sum, subject) => sum + subject.remainingVideos, 0);
   const remainingHours = activeSubjects.reduce((sum, subject) => sum + subject.remainingStudyHours, 0);

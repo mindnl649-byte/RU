@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AuthPanel } from "./components/AuthPanel.jsx";
 import { Shell } from "./components/Shell.jsx";
 import { useStudyState } from "./hooks/useStudyState.js";
@@ -11,6 +12,7 @@ import { Timer } from "./pages/Timer.jsx";
 import { Calendar } from "./pages/Calendar.jsx";
 
 export function App() {
+  const { t } = useTranslation();
   const [activePage, setActivePage] = useState("today");
   const [localOnly, setLocalOnly] = useState(() => localStorage.getItem("studypath.local-only") === "true");
   const { authLoading, logout, user } = useAuth();
@@ -79,8 +81,8 @@ export function App() {
     return (
       <div className="grid min-h-screen place-items-center bg-paper-100 text-ink-900">
         <div className="text-center">
-          <p className="font-serif text-3xl">StudyPath</p>
-          <p className="mt-2 text-sm text-ink-500">Loading your study system...</p>
+          <p className="font-serif text-3xl">{t("brand.title")}</p>
+          <p className="mt-2 text-sm text-ink-500">{t("common.loading_study_system")}</p>
         </div>
       </div>
     );
@@ -91,11 +93,11 @@ export function App() {
       <Shell activePage={activePage} setActivePage={setActivePage} syncStatus={syncStatus} user={user}>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-500">
-            {user ? `Signed in as ${user.isAnonymous ? "guest" : user.email || user.displayName}` : "Local mode"}
+            {user ? `${t("common.signInAs")} ${user.isAnonymous ? t("common.guest") : user.email || user.displayName}` : t("common.localMode")}
           </p>
           {user && (
             <button className="btn-ghost" onClick={logout}>
-              Sign out
+              {t("common.signOut")}
             </button>
           )}
           {!user && localOnly && (
@@ -106,7 +108,7 @@ export function App() {
                 setLocalOnly(false);
               }}
             >
-              Enable cloud sync
+              {t("common.enableCloudSync")}
             </button>
           )}
         </div>

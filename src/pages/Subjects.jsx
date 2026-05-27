@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { CHECKLIST, STATUS_OPTIONS } from "../data/subjects.js";
 import { getEnrichedSubjects } from "../utils/calculations.js";
 import { SemesterManager } from "../components/SemesterManager.jsx";
@@ -23,6 +24,7 @@ export function Subjects({
   duplicateSubject,
   getActiveSubjects,
 }) {
+  const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // "cards" or "checklist"
@@ -105,8 +107,8 @@ export function Subjects({
   return (
     <div className="space-y-6">
       <header>
-        <p className="eyebrow">Study Management</p>
-        <h2 className="page-title">Manage your subjects and semesters.</h2>
+        <p className="eyebrow">{t("subjects.eyebrow")}</p>
+        <h2 className="page-title">{t("subjects.title")}</h2>
       </header>
 
       {/* Semester Manager */}
@@ -133,7 +135,7 @@ export function Subjects({
                 : "border border-ink-900/20 bg-paper-50 text-ink-700 hover:bg-paper-100"
             }`}
           >
-            Grid View
+            {t("subjects.gridView")}
           </button>
           <button
             onClick={() => setViewMode("checklist")}

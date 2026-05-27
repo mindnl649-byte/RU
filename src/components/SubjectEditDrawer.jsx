@@ -1,36 +1,82 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
+import { STATUS_OPTIONS } from "../data/subjects.js";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const STATUS_OPTIONS = ["not started", "watching lectures", "reading", "assignments", "revision", "completed"];
 const DIFFICULTY_OPTIONS = ["easy", "medium", "hard"];
 const EXAM_TYPES = ["midterm", "final", "quiz", "practical"];
 
-export function SubjectEditDrawer({ isOpen, onClose, subject, onSave }) {
-  const [formData, setFormData] = useState(
-    subject || {
-      code: "",
-      title: "",
-      credits: 3,
-      lecturer: "",
-      room: "",
-      difficulty: "medium",
-      status: "not started",
-      progress: 0,
-      classDays: [],
-      exams: [],
-      notes: "",
-      totalVideos: 10,
-      isWrittenExam: false,
-    }
-  );
+const BLANK_SUBJECT = {
+  code: "",
+  title: "",
+  category: "",
+  credits: 3,
+  lecturer: "",
+  room: "",
+  difficulty: "medium",
+  status: "not started",
+  progress: 0,
+  classDays: [],
+  exams: [],
+  notes: "",
+  totalVideos: 10,
+  videosWatched: 0,
+  estimatedStudyHours: 40,
+  isWrittenExam: false,
+};
 
+function normalizeSubjectForForm(subject) {
+  if (!subject) return BLANK_SUBJECT;
+
+  const status = STATUS_OPTIONS.includes(subject.status) ? subject.status : "not started";
+
+  return {
+    ...BLANK_SUBJECT,
+    ...subject,
+    title: subject.title || subject.name || "",
+    category: subject.category || "",
+    credits: Number(subject.credits || BLANK_SUBJECT.credits),
+    progress: Number(subject.progress ?? subject.progressPercentage ?? BLANK_SUBJECT.progress),
+    classDays: Array.isArray(subject.classDays) ? subject.classDays : [],
+    exams: Array.isArray(subject.exams) ? subject.exams : [],
+    totalVideos: Number(subject.totalVideos || BLANK_SUBJECT.totalVideos),
+    videosWatched: Number(subject.videosWatched || 0),
+    estimatedStudyHours: Number(subject.estimatedStudyHours || BLANK_SUBJECT.estimatedStudyHours),
+    status,
+    isWrittenExam: Boolean(subject.isWrittenExam),
+  };
+}
+
+export function SubjectEditDrawer({ isOpen, onClose, subject, onSave }) {
+  const isEditMode = Boolean(subject);
+  const initialFormData = useMemo(() => normalizeSubjectForForm(subject), [subject]);
+  const [formData, setFormData] = useState(initialFormData);
   const [activeTab, setActiveTab] = useState("basic");
 
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(initialFormData);
+      setActiveTab("basic");
+    }
+  }, [initialFormData, isOpen]);
+
   const handleSave = () => {
-    if (formData.code && formData.title) {
-      onSave(formData);
+    const cleanedCode = formData.code.trim().toUpperCase();
+    const cleanedTitle = formData.title.trim();
+
+    if (cleanedCode && cleanedTitle) {
+      onSave({
+        ...formData,
+        code: cleanedCode,
+        title: cleanedTitle,
+        name: cleanedTitle,
+        credits: Number(formData.credits || 0),
+        progress: Number(formData.progress || 0),
+        totalVideos: Number(formData.totalVideos || 0),
+        videosWatched: Number(formData.videosWatched || 0),
+        estimatedStudyHours: Number(formData.estimatedStudyHours || 0),
+      });
       onClose();
     }
   };
@@ -95,14 +141,23 @@ export function SubjectEditDrawer({ isOpen, onClose, subject, onSave }) {
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed right-0 top-0 z-50 h-screen w-full max-w-md overflow-y-auto bg-paper-100 shadow-2xl md:max-w-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="subject-drawer-title"
           >
             <div className="sticky top-0 flex items-center justify-between border-b border-ink-900/10 bg-paper-100 px-6 py-4">
-              <h2 className="font-serif text-2xl text-ink-900">
-                {subject ? "Edit Subject" : "Add Subject"}
-              </h2>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                  {isEditMode ? "Edit mode" : "Add mode"}
+                </p>
+                <h2 id="subject-drawer-title" className="font-serif text-2xl text-ink-900">
+                  {isEditMode ? "Edit Subject" : "Add Subject"}
+                </h2>
+              </div>
               <button
                 onClick={onClose}
-                className="rounded-lg p-2 hover:bg-ink-900/5 transition"
+                className="rounded-lg p-2 transition hover:bg-ink-900/5 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                aria-label="Close subject editor"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -137,10 +192,19 @@ export function SubjectEditDrawer({ isOpen, onClose, subject, onSave }) {
                     <input
                       type="text"
                       value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                       placeholder="e.g., POL2200"
-                      className="w-full rounded-lg border border-ink-900/20 px-4 py-2 text-sm outline-none focus:border-ink-900/50"
+                      readOnly={isEditMode}
+                      aria-describedby={isEditMode ? "subject-code-help" : undefined}
+                      className={`w-full rounded-lg border border-ink-900/20 px-4 py-2 text-sm outline-none focus:border-ink-900/50 ${
+                        isEditMode ? "cursor-not-allowed bg-ink-900/5 text-ink-500" : ""
+                      }`}
                     />
+                    {isEditMode && (
+                      <p id="subject-code-help" className="mt-1 text-xs text-ink-500">
+                        Subject code is the unique ID and cannot be changed while editing.
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -152,6 +216,19 @@ export function SubjectEditDrawer({ isOpen, onClose, subject, onSave }) {
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="e.g., Thai Politics"
+                      className="w-full rounded-lg border border-ink-900/20 px-4 py-2 text-sm outline-none focus:border-ink-900/50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">
+                      Category
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.category || ""}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      placeholder="e.g., Political Science, Economics"
                       className="w-full rounded-lg border border-ink-900/20 px-4 py-2 text-sm outline-none focus:border-ink-900/50"
                     />
                   </div>
@@ -482,6 +559,19 @@ export function SubjectEditDrawer({ isOpen, onClose, subject, onSave }) {
 
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">
+                      Estimated Study Hours
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.estimatedStudyHours || 0}
+                      onChange={(e) => setFormData({ ...formData, estimatedStudyHours: Number(e.target.value) })}
+                      min="0"
+                      className="w-full rounded-lg border border-ink-900/20 px-4 py-2 text-sm outline-none focus:border-ink-900/50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">
                       Videos Watched
                     </label>
                     <input
@@ -502,7 +592,7 @@ export function SubjectEditDrawer({ isOpen, onClose, subject, onSave }) {
                 Cancel
               </button>
               <button onClick={handleSave} className="btn-primary flex-1 rounded-lg px-4 py-2">
-                Save Subject
+                {isEditMode ? "Update Subject" : "Add Subject"}
               </button>
             </div>
           </motion.div>

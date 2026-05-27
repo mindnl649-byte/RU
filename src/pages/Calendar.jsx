@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { generateWeeklySchedule } from "../utils/semesterStats.js";
 
 export function Calendar({ studyState, getActiveSubjects }) {
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState("month"); // "month", "week", "day"
+  const [viewMode, setViewMode] = useState("month");
 
   // Support both old and new systems
   const useNewSystem = studyState?.semesters && Object.keys(studyState.semesters).length > 0;
@@ -26,8 +28,8 @@ export function Calendar({ studyState, getActiveSubjects }) {
   return (
     <div className="space-y-6">
       <header>
-        <p className="eyebrow">Schedule</p>
-        <h2 className="page-title">Your classes and exams calendar.</h2>
+        <p className="eyebrow">{t("calendar.eyebrow")}</p>
+        <h2 className="page-title">{t("calendar.title")}</h2>
       </header>
 
       {/* View Mode Toggle */}
@@ -40,7 +42,7 @@ export function Calendar({ studyState, getActiveSubjects }) {
               : "border border-ink-900/20 bg-paper-50 text-ink-700 hover:bg-paper-100"
           }`}
         >
-          Month
+          {t("calendar.monthView")}
         </button>
         <button
           onClick={() => setViewMode("week")}
@@ -50,13 +52,13 @@ export function Calendar({ studyState, getActiveSubjects }) {
               : "border border-ink-900/20 bg-paper-50 text-ink-700 hover:bg-paper-100"
           }`}
         >
-          Week
+          {t("calendar.weekView")}
         </button>
         <button
           onClick={handleToday}
           className="rounded-lg border border-ink-900/20 bg-paper-50 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-paper-100 transition"
         >
-          Today
+          {t("calendar.todayView")}
         </button>
       </div>
 
@@ -72,8 +74,8 @@ export function Calendar({ studyState, getActiveSubjects }) {
 
       {/* Upcoming Events */}
       <div className="card">
-        <p className="eyebrow">Upcoming Events</p>
-        <h3 className="section-title">Next 7 days</h3>
+        <p className="eyebrow">{t("calendar.upcomingEvents")}</p>
+        <h3 className="section-title">{t("calendar.next7Days")}</h3>
         <UpcomingEvents subjects={subjects} daysAhead={7} />
       </div>
     </div>
@@ -81,6 +83,7 @@ export function Calendar({ studyState, getActiveSubjects }) {
 }
 
 function MonthView({ date, onPrevMonth, onNextMonth, subjects }) {
+  const { t } = useTranslation();
   const year = date.getFullYear();
   const month = date.getMonth();
 
@@ -125,9 +128,16 @@ function MonthView({ date, onPrevMonth, onNextMonth, subjects }) {
 
       // Add classes
       if (subject.classDays) {
-        const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][
-          eventDate.getDay()
+        const dayNames = [
+          t("calendar.sunday"),
+          t("calendar.monday"),
+          t("calendar.tuesday"),
+          t("calendar.wednesday"),
+          t("calendar.thursday"),
+          t("calendar.friday"),
+          t("calendar.saturday"),
         ];
+        const dayName = dayNames[eventDate.getDay()];
         subject.classDays.forEach((classDay) => {
           if (classDay.day === dayName) {
             events.push({ type: "class", ...classDay, subject });
@@ -140,18 +150,18 @@ function MonthView({ date, onPrevMonth, onNextMonth, subjects }) {
   };
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    t("calendar.january"),
+    t("calendar.february"),
+    t("calendar.march"),
+    t("calendar.april"),
+    t("calendar.may"),
+    t("calendar.june"),
+    t("calendar.july"),
+    t("calendar.august"),
+    t("calendar.september"),
+    t("calendar.october"),
+    t("calendar.november"),
+    t("calendar.december"),
   ];
 
   return (
@@ -179,7 +189,7 @@ function MonthView({ date, onPrevMonth, onNextMonth, subjects }) {
 
       {/* Day names */}
       <div className="mb-2 grid grid-cols-7 gap-1">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+        {[t("calendar.sun"), t("calendar.mon"), t("calendar.tue"), t("calendar.wed"), t("calendar.thu"), t("calendar.fri"), t("calendar.sat")].map((day) => (
           <div key={day} className="py-2 text-center text-xs font-semibold text-ink-600">
             {day}
           </div>
@@ -236,6 +246,7 @@ function MonthView({ date, onPrevMonth, onNextMonth, subjects }) {
 }
 
 function WeekView({ date, onPrevMonth, onNextMonth, subjects }) {
+  const { t } = useTranslation();
   // Get Monday of the week containing date
   const dayOfWeek = date.getDay();
   const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
@@ -248,7 +259,15 @@ function WeekView({ date, onPrevMonth, onNextMonth, subjects }) {
     weekDays.push(day);
   }
 
-  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const dayNames = [
+    t("calendar.monday"),
+    t("calendar.tuesday"),
+    t("calendar.wednesday"),
+    t("calendar.thursday"),
+    t("calendar.friday"),
+    t("calendar.saturday"),
+    t("calendar.sunday"),
+  ];
 
   const getClassesForDay = (day) => {
     const dayName = dayNames[day.getDay() === 0 ? 6 : day.getDay() - 1];
@@ -271,7 +290,7 @@ function WeekView({ date, onPrevMonth, onNextMonth, subjects }) {
     <div className="card overflow-x-auto">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-serif text-lg">
-          Week of {monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          {t("calendar.weekOf")} {monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
         </h3>
         <div className="flex gap-2">
           <button
@@ -306,7 +325,7 @@ function WeekView({ date, onPrevMonth, onNextMonth, subjects }) {
               </p>
               <div className="space-y-1.5">
                 {classes.length === 0 ? (
-                  <p className="text-xs text-ink-400">No classes</p>
+                  <p className="text-xs text-ink-400">{t("calendar.noClasses")}</p>
                 ) : (
                   classes.map((cls, i) => (
                     <div key={i} className="text-xs rounded-lg bg-amber-500/20 text-amber-700 p-1.5">
@@ -328,6 +347,7 @@ function WeekView({ date, onPrevMonth, onNextMonth, subjects }) {
 }
 
 function UpcomingEvents({ subjects, daysAhead = 7 }) {
+  const { t } = useTranslation();
   const events = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -354,10 +374,17 @@ function UpcomingEvents({ subjects, daysAhead = 7 }) {
 
     // Classes (next occurrence)
     if (subject.classDays) {
+      const dayNames = [
+        t("calendar.sunday"),
+        t("calendar.monday"),
+        t("calendar.tuesday"),
+        t("calendar.wednesday"),
+        t("calendar.thursday"),
+        t("calendar.friday"),
+        t("calendar.saturday"),
+      ];
       subject.classDays.forEach((classDay) => {
-        const dayIndex = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(
-          classDay.day
-        );
+        const dayIndex = dayNames.indexOf(classDay.day);
         const currentDayIndex = today.getDay();
         let daysUntil = (dayIndex - currentDayIndex + 7) % 7;
         if (daysUntil === 0) daysUntil = 7;
@@ -384,7 +411,7 @@ function UpcomingEvents({ subjects, daysAhead = 7 }) {
   return (
     <div className="mt-4 space-y-2">
       {events.length === 0 ? (
-        <p className="text-sm text-ink-500">No events scheduled</p>
+        <p className="text-sm text-ink-500">{t("calendar.noEventsScheduled")}</p>
       ) : (
         events.map((event, i) => (
           <motion.div
@@ -414,7 +441,7 @@ function UpcomingEvents({ subjects, daysAhead = 7 }) {
               </div>
               {event.type === "exam" && (
                 <span className="rounded-full bg-red-500/20 px-2 py-1 text-xs font-medium text-red-700">
-                  {event.type}
+                  {t("calendar.exam")}
                 </span>
               )}
             </div>

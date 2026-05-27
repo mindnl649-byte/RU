@@ -175,27 +175,31 @@ export function useStudyState(user) {
 
   function addSubject(subjectData) {
     const code = subjectData.code;
+    const title = subjectData.title || subjectData.name;
     updateStudyState((current) => ({
       ...current,
       subjectMetadata: {
         ...current.subjectMetadata,
         [code]: {
           code: subjectData.code,
-          name: subjectData.name,
+          name: title,
           credits: subjectData.credits,
           semester: subjectData.semester,
+          category: subjectData.category,
           difficulty: subjectData.difficulty,
           estimatedStudyHours: subjectData.estimatedStudyHours,
           totalVideos: subjectData.totalVideos,
+          isWrittenExam: subjectData.isWrittenExam || false,
         },
       },
       subjects: {
         ...current.subjects,
         [code]: {
           checklist: Object.fromEntries(CHECKLIST.map((item) => [item, false])),
-          notes: "",
-          status: "not started",
-          videosWatched: 0,
+          notes: subjectData.notes || "",
+          status: subjectData.status || "not started",
+          videosWatched: Number(subjectData.videosWatched || 0),
+          progress: Number(subjectData.progress || 0),
         },
       },
     }));
@@ -215,12 +219,14 @@ export function useStudyState(user) {
 
       subjectMetadata[newCode] = {
         code: subjectData.code,
-        name: subjectData.name,
+        name: subjectData.title || subjectData.name,
         credits: subjectData.credits,
         semester: subjectData.semester,
+        category: subjectData.category,
         difficulty: subjectData.difficulty,
         estimatedStudyHours: subjectData.estimatedStudyHours,
         totalVideos: subjectData.totalVideos,
+        isWrittenExam: subjectData.isWrittenExam || false,
       };
 
       return {
@@ -337,14 +343,19 @@ export function useStudyState(user) {
             id: subjectId,
             code: subjectData.code,
             title: subjectData.title,
+            name: subjectData.title,
+            category: subjectData.category || "",
             credits: subjectData.credits,
             difficulty: subjectData.difficulty,
-            progress: 0,
-            status: "not started",
+            estimatedStudyHours: Number(subjectData.estimatedStudyHours || 40),
+            progress: Number(subjectData.progress || 0),
+            status: subjectData.status || "not started",
             classDays: subjectData.classDays || [],
             exams: subjectData.exams || [],
-            notes: "",
-            videosWatched: 0,
+            lecturer: subjectData.lecturer || "",
+            room: subjectData.room || "",
+            notes: subjectData.notes || "",
+            videosWatched: Number(subjectData.videosWatched || 0),
             totalVideos: subjectData.totalVideos || 10,
             isWrittenExam: subjectData.isWrittenExam || false,
             checklist: Object.fromEntries(CHECKLIST.map((item) => [item, false])),

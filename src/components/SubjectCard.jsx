@@ -31,9 +31,9 @@ export function SubjectCard({ subject, onEdit, onDuplicate, onDelete }) {
           {subject.credits} credits
         </span>
         <span className={`rounded-lg px-2 py-1 text-xs font-medium ${
-          subject.status === "completed"
+          subject.status === "passed" || subject.status === "completed"
             ? "bg-green-500/10 text-green-700"
-            : subject.status === "revision"
+            : subject.status === "reviewing" || subject.status === "practicing exams"
             ? "bg-blue-500/10 text-blue-700"
             : "bg-amber-500/10 text-amber-700"
         }`}>
@@ -96,25 +96,28 @@ export function SubjectCard({ subject, onEdit, onDuplicate, onDelete }) {
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+      <div className="flex gap-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
         <button
           onClick={() => onEdit(subject)}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-500/20 transition"
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-500/20 focus:outline-none focus:ring-2 focus:ring-amber-500/35 transition"
+          aria-label={`Edit ${subject.code}`}
         >
           <Edit2 className="h-3.5 w-3.5" />
           Edit
         </button>
         <button
           onClick={() => onDuplicate(subject)}
-          className="flex items-center justify-center rounded-lg bg-ink-900/5 px-3 py-2 text-xs font-medium text-ink-600 hover:bg-ink-900/10 transition"
+          className="flex items-center justify-center rounded-lg bg-ink-900/5 px-3 py-2 text-xs font-medium text-ink-600 hover:bg-ink-900/10 focus:outline-none focus:ring-2 focus:ring-ink-900/20 transition"
           title="Duplicate"
+          aria-label={`Duplicate ${subject.code}`}
         >
           <Copy className="h-3.5 w-3.5" />
         </button>
         <button
           onClick={() => onDelete(subject.id)}
-          className="flex items-center justify-center rounded-lg bg-red-500/5 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-500/10 transition"
+          className="flex items-center justify-center rounded-lg bg-red-500/5 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-500/10 focus:outline-none focus:ring-2 focus:ring-red-500/25 transition"
           title="Delete"
+          aria-label={`Delete ${subject.code}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
