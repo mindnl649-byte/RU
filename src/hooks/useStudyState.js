@@ -8,6 +8,7 @@ import { sortSemesters } from "../utils/semesters.js";
 const LOCAL_KEY = "studypath.study-state.v3";
 const FIRESTORE_COLLECTION = "users";
 const FIRESTORE_DOC = "studyState";
+const CLOUD_LOAD_TIMEOUT_MS = 8000;
 
 function generateId() {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -84,23 +85,43 @@ export function useStudyState(user) {
     if (!user) {
       setCloudReady(false);
       setSyncStatus("local");
+      setSyncError("");
       const localState = readLocalState();
       setStudyState(localState);
       return;
     }
 
-    if (!docRef) return;
+    if (!docRef) {
+      setSyncStatus("offline");
+      setSyncError("Firebase cloud database is not configured for this deployment.");
+      return;
+    }
 
     setSyncStatus("loading");
+    setSyncError("");
+
+    const loadingTimeout = window.setTimeout(() => {
+      setSyncStatus((current) => {
+        if (current === "loading") {
+          setSyncError(
+            "Cloud is taking too long to respond. Check Firestore rules, authorized domains, or tap Sync now."
+          );
+          return "offline";
+        }
+        return current;
+      });
+    }, CLOUD_LOAD_TIMEOUT_MS);
 
     const unsubscribe = onSnapshot(
       docRef,
       async (snapshot) => {
+        window.clearTimeout(loadingTimeout);
         if (snapshot.exists()) {
           const firestoreState = snapshot.data().state;
           lastCloudStateRef.current = JSON.stringify(firestoreState);
           setStudyState(firestoreState);
           writeLocalState(firestoreState);
+
           setCloudReady(true);
           setSyncStatus("synced");
           setSyncError("");
@@ -124,6 +145,7 @@ export function useStudyState(user) {
         }
       },
       (err) => {
+        window.clearTimeout(loadingTimeout);
         console.error("Firestore listener error:", err);
         setSyncStatus("offline");
         setSyncError(err.message || "Unable to listen for cloud updates.");
@@ -131,7 +153,10 @@ export function useStudyState(user) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      window.clearTimeout(loadingTimeout);
+      unsubscribe();
+    };
   }, [docRef, user]);
 
   // Auto-sync to Firestore

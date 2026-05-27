@@ -60,6 +60,7 @@ const SEMESTERS_DATA = [
 ];
 
 export function createDefaultState() {
+  const now = new Date().toISOString();
   const semesters = {};
   const subjectsBySemester = {};
   const subjects = {};
@@ -74,7 +75,8 @@ export function createDefaultState() {
       endDate: semester.endDate,
       examPeriod: semester.examPeriod,
       isActive: index === 0,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     const semesterSubjects = MASTER_SUBJECTS.filter((s) => s.semester === semester.name);
@@ -98,8 +100,8 @@ export function createDefaultState() {
         totalVideos: subject.totalVideos,
         isWrittenExam: subject.isWrittenExam || false,
         checklist: Object.fromEntries(CHECKLIST.map((item) => [item, false])),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       };
       totalSubjects++;
     });
@@ -109,6 +111,8 @@ export function createDefaultState() {
 
   return {
     version: 2,
+    createdAt: now,
+    updatedAt: now,
     activeSemesterId: SEMESTERS_DATA[0].id,
     semesters,
     subjects,
