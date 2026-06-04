@@ -139,15 +139,17 @@ export function getDailyPlan(studyState) {
     .sort((a, b) => b.remainingStudyHours - a.remainingStudyHours);
   const remainingVideos = activeSubjects.reduce((sum, subject) => sum + subject.remainingVideos, 0);
   const remainingHours = activeSubjects.reduce((sum, subject) => sum + subject.remainingStudyHours, 0);
-  const daysUntilExam = Math.max(
-    1,
-    Math.ceil((new Date(studyState.examDate).getTime() - Date.now()) / MS_PER_DAY)
+  const nextExam = getNextExamCountdown(activeSubjects);
+  const fallbackDaysUntilExam = Math.ceil(
+    (new Date(studyState.examDate).getTime() - Date.now()) / MS_PER_DAY
   );
+  const daysUntilExam = Math.max(1, nextExam?.daysUntil ?? fallbackDaysUntilExam);
   const videosPerDay = Math.max(1, Math.ceil(remainingVideos / daysUntilExam));
   const hoursPerDay = Math.max(1, Math.ceil(remainingHours / daysUntilExam));
 
   return {
     daysUntilExam,
+    nextExam,
     focusSubjects: activeSubjects.slice(0, 3),
     hoursPerDay,
     remainingHours,
@@ -157,6 +159,44 @@ export function getDailyPlan(studyState) {
       videosPerDay > 3 || hoursPerDay > 4
         ? "You are behind pace. Use shorter daily blocks and prioritize hard subjects first."
         : "Current pace is realistic. Keep the daily target small and consistent.",
+  };
+}
+
+export function getNextExamCountdown(subjects) {
+  if (!subjects || subjects.length === 0) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const upcomingExams = subjects
+    .filter((subject) => subject.status !== "passed" && subject.status !== "completed")
+    .flatMap((subject) =>
+      (subject.exams || [])
+        .filter((exam) => exam?.date)
+        .map((exam) => {
+          const examDate = new Date(exam.date);
+          examDate.setHours(0, 0, 0, 0);
+          return {
+            exam,
+            examDate,
+            subject,
+            daysUntil: Math.ceil((examDate - today) / MS_PER_DAY),
+          };
+        })
+    )
+    .filter(({ daysUntil }) => daysUntil >= 0)
+    .sort((a, b) => {
+      if (a.examDate.getTime() !== b.examDate.getTime()) {
+        return a.examDate.getTime() - b.examDate.getTime();
+      }
+      return (a.exam.start || "").localeCompare(b.exam.start || "");
+    });
+
+  if (upcomingExams.length === 0) return null;
+
+  return {
+    ...upcomingExams[0],
+    examsRemaining: upcomingExams.length,
   };
 }
 

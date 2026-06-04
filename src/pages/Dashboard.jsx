@@ -1,7 +1,12 @@
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { getDailyPlan, getEnrichedSubjects, getGraduationStats } from "../utils/calculations.js";
-import { calculateSemesterStats, calculateSemesterGPA, prioritizeSubjects } from "../utils/semesterStats.js";
+import {
+  getDailyPlan,
+  getEnrichedSubjects,
+  getGraduationStats,
+  getNextExamCountdown,
+} from "../utils/calculations.js";
+import { calculateSemesterStats, prioritizeSubjects } from "../utils/semesterStats.js";
 import { getActiveSemester } from "../utils/semesters.js";
 
 export function Dashboard({
@@ -10,7 +15,7 @@ export function Dashboard({
   updateSubjectInSemester,
   getActiveSubjects,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Support both old and new systems
   const useNewSystem = studyState?.semesters && Object.keys(studyState.semesters).length > 0;
 
@@ -29,6 +34,7 @@ export function Dashboard({
 
   const graduation = getGraduationStats(studyState);
   const daily = getDailyPlan(studyState);
+  const nextExam = getNextExamCountdown(subjects) || daily.nextExam;
 
   // Get focused subjects for today
   const prioritized = useNewSystem ? prioritizeSubjects(subjects) : daily.focusSubjects || [];
@@ -103,11 +109,25 @@ export function Dashboard({
         {/* Stats Card */}
         <div className="card">
           <p className="eyebrow">
-            {useNewSystem ? t("dashboard.semesterOverview") : t("dashboard.automaticPlanner")}
+            {t("dashboard.nextExam")}
           </p>
+          {nextExam ? (
+            <ExamCountdown countdown={nextExam} locale={i18n.language} t={t} />
+          ) : (
+            <div className="mt-3 rounded-xl border border-ink-900/10 bg-paper-50 p-4">
+              <p className="font-serif text-2xl text-ink-900">{t("dashboard.noUpcomingExam")}</p>
+              <p className="mt-1 text-xs text-ink-500">{t("dashboard.addExamHint")}</p>
+            </div>
+          )}
+
+          <div className="mt-5 border-t border-ink-900/10 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-500">
+              {useNewSystem ? t("dashboard.semesterOverview") : t("dashboard.automaticPlanner")}
+            </p>
+          </div>
           {useNewSystem && semesterStats ? (
             <>
-              <h3 className="mt-2 font-serif text-2xl">{semesterStats.gpa.toFixed(2)} GPA</h3>
+              <h3 className="mt-2 font-serif text-xl">{semesterStats.gpa.toFixed(2)} GPA</h3>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Metric label={t("dashboard.credits")} value={semesterStats.completedCredits} detail={`of ${semesterStats.totalCredits}`} />
                 <Metric label={t("dashboard.progress")} value={`${semesterStats.completionRate}%`} />
@@ -117,7 +137,6 @@ export function Dashboard({
             </>
           ) : (
             <>
-              <h3 className="mt-2 font-serif text-2xl">{daily.daysUntilExam} {t("dashboard.daysUntilExams")}</h3>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Metric label={t("dashboard.videosLeft")} value={daily.remainingVideos} />
                 <Metric label={t("dashboard.hoursLeft")} value={daily.remainingHours} />
@@ -180,6 +199,36 @@ export function Dashboard({
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ExamCountdown({ countdown, locale, t }) {
+  const { daysUntil, exam, subject } = countdown;
+  const dateLocale = locale?.startsWith("th") ? "th-TH" : "en-US";
+  const formattedDate = new Date(exam.date).toLocaleDateString(dateLocale, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const dayLabel =
+    daysUntil === 0
+      ? t("dashboard.examToday")
+      : daysUntil === 1
+        ? t("dashboard.examTomorrow")
+        : t("dashboard.daysLeft", { count: daysUntil });
+
+  return (
+    <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+      <p className="font-serif text-3xl text-ink-900">{dayLabel}</p>
+      <p className="mt-2 text-sm font-semibold text-red-700">
+        {subject.code} - {subject.name || subject.title}
+      </p>
+      <p className="mt-1 text-xs text-ink-600">
+        {exam.type || t("calendar.exam")} - {formattedDate}
+        {exam.start && `, ${exam.start}`}
+      </p>
     </div>
   );
 }
