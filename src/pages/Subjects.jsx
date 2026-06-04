@@ -8,6 +8,8 @@ import { SubjectCard } from "../components/SubjectCard.jsx";
 import { SubjectEditDrawer } from "../components/SubjectEditDrawer.jsx";
 import { getActiveSemester } from "../utils/semesters.js";
 
+const FILTERS = ["all", "urgent", "upcoming", "missingExam", "notStarted"];
+
 export function Subjects({
   studyState,
   updateStudyState,
@@ -29,6 +31,7 @@ export function Subjects({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // "cards" or "checklist"
+  const [filter, setFilter] = useState("all");
 
   // Support both old and new data structures
   const useNewSystem = studyState?.semesters && Object.keys(studyState.semesters).length > 0;
@@ -43,6 +46,8 @@ export function Subjects({
   };
 
   const subjects = getSubjects();
+  const examSummary = getExamSummary(subjects);
+  const filteredSubjects = subjects.filter((subject) => matchesSubjectFilter(subject, filter));
   const activeSemester = studyState?.semesters
     ? getActiveSemester(studyState.semesters, studyState.activeSemesterId)
     : null;
@@ -122,6 +127,7 @@ export function Subjects({
             onDeleteSemester={deleteSemester}
             onSwitchSemester={switchSemester}
           />
+          <SemesterExamSummary summary={examSummary} t={t} />
         </div>
       )}
 
@@ -146,28 +152,46 @@ export function Subjects({
                 : "border border-ink-900/20 bg-paper-50 text-ink-700 hover:bg-paper-100"
             }`}
           >
-            Checklist
+            {t("subjects.checklist")}
           </button>
         </div>
         <button onClick={handleAddSubject} className="btn-primary rounded-lg px-4 py-2 text-sm">
-          + Add Subject
+          {t("subjects.addSubject")}
         </button>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {FILTERS.map((filterId) => (
+          <button
+            key={filterId}
+            onClick={() => setFilter(filterId)}
+            className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${
+              filter === filterId
+                ? "bg-ink-800 text-paper-100 shadow-lifted"
+                : "border border-ink-900/10 bg-paper-50 text-ink-600 hover:bg-paper-100"
+            }`}
+          >
+            {t(`subjects.filters.${filterId}`)}
+          </button>
+        ))}
       </div>
 
       {/* Grid View */}
       {viewMode === "cards" && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence>
-            {subjects.length === 0 ? (
+            {filteredSubjects.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="col-span-full text-center py-12"
               >
-                <p className="text-ink-500">No subjects yet. Create one to get started!</p>
+                <p className="text-ink-500">
+                  {subjects.length === 0 ? t("subjects.noSubjects") : t("subjects.noFilteredSubjects")}
+                </p>
               </motion.div>
             ) : (
-              subjects.map((subject) => (
+              filteredSubjects.map((subject) => (
                 <SubjectCard
                   key={subject.id || subject.code}
                   subject={subject}
@@ -184,7 +208,7 @@ export function Subjects({
       {/* Checklist View - Legacy */}
       {viewMode === "checklist" && !useNewSystem && (
         <div className="space-y-4">
-          {subjects.map((subject) => (
+          {filteredSubjects.map((subject) => (
             <motion.article
               key={subject.code}
               initial={{ opacity: 0, y: 12 }}
@@ -269,7 +293,7 @@ export function Subjects({
       {/* Checklist View - New System */}
       {viewMode === "checklist" && useNewSystem && subjects.length > 0 && (
         <div className="space-y-4">
-          {subjects.map((subject) => (
+          {filteredSubjects.map((subject) => (
             <motion.div
               key={subject.id}
               initial={{ opacity: 0, y: 12 }}
@@ -368,4 +392,105 @@ export function Subjects({
       />
     </div>
   );
+}
+
+function SemesterExamSummary({ summary, t }) {
+  const next = summary.nextExam;
+
+  return (
+    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <SummaryMetric label={t("subjects.examSummary.total")} value={summary.totalExams} />
+      <SummaryMetric
+        label={t("subjects.examSummary.next")}
+        value={next ? t("subjects.examSummary.daysLeft", { count: next.daysUntil }) : t("subjects.examSummary.none")}
+        detail={next ? `${next.subject.code} - ${next.subject.title || next.subject.name}` : undefined}
+        tone={next?.daysUntil <= 7 ? "urgent" : "normal"}
+      />
+      <SummaryMetric
+        label={t("subjects.examSummary.missing")}
+        value={summary.missingExamCount}
+        detail={summary.missingExamCount > 0 ? t("subjects.examSummary.missingHint") : t("subjects.examSummary.complete")}
+        tone={summary.missingExamCount > 0 ? "warning" : "normal"}
+      />
+    </div>
+  );
+}
+
+function SummaryMetric({ detail, label, tone = "normal", value }) {
+  const toneClass = {
+    normal: "border-ink-900/10 bg-paper-50 text-ink-900",
+    urgent: "border-red-500/20 bg-red-500/5 text-red-700",
+    warning: "border-amber-500/25 bg-amber-500/10 text-amber-700",
+  }[tone];
+
+  return (
+    <div className={`rounded-xl border p-4 ${toneClass}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] opacity-75">{label}</p>
+      <p className="mt-2 font-serif text-2xl">{value}</p>
+      {detail && <p className="mt-1 text-xs text-ink-500">{detail}</p>}
+    </div>
+  );
+}
+
+function getExamSummary(subjects) {
+  const today = getToday();
+  const activeSubjects = subjects.filter((subject) => !isCompleted(subject));
+  const upcomingExams = activeSubjects
+    .flatMap((subject) =>
+      (subject.exams || [])
+        .filter((exam) => exam?.date)
+        .map((exam) => {
+          const examDate = new Date(exam.date);
+          examDate.setHours(0, 0, 0, 0);
+          return {
+            exam,
+            subject,
+            daysUntil: Math.ceil((examDate - today) / (1000 * 60 * 60 * 24)),
+          };
+        })
+    )
+    .filter((item) => item.daysUntil >= 0)
+    .sort((a, b) => a.daysUntil - b.daysUntil || (a.exam.start || "").localeCompare(b.exam.start || ""));
+
+  return {
+    missingExamCount: activeSubjects.filter((subject) => !getUpcomingExam(subject)).length,
+    nextExam: upcomingExams[0] || null,
+    totalExams: upcomingExams.length,
+  };
+}
+
+function matchesSubjectFilter(subject, filter) {
+  const exam = getUpcomingExam(subject);
+
+  if (filter === "urgent") return Boolean(exam && exam.daysUntil <= 7);
+  if (filter === "upcoming") return Boolean(exam && exam.daysUntil <= 30);
+  if (filter === "missingExam") return !isCompleted(subject) && !exam;
+  if (filter === "notStarted") return subject.status === "not started";
+  return true;
+}
+
+function getUpcomingExam(subject) {
+  const today = getToday();
+  return (subject.exams || [])
+    .filter((exam) => exam?.date)
+    .map((exam) => {
+      const examDate = new Date(exam.date);
+      examDate.setHours(0, 0, 0, 0);
+      return {
+        exam,
+        daysUntil: Math.ceil((examDate - today) / (1000 * 60 * 60 * 24)),
+      };
+    })
+    .filter(({ daysUntil }) => daysUntil >= 0)
+    .sort((a, b) => a.daysUntil - b.daysUntil || (a.exam.start || "").localeCompare(b.exam.start || ""))[0] || null;
+}
+
+function getToday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function isCompleted(subject) {
+  return subject.status === "passed" || subject.status === "completed";
 }

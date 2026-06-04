@@ -131,8 +131,25 @@
     "status": "Status",
     "videosWatched": "Videos watched",
     "noSubjects": "No subjects yet. Create one to get started!",
+    "noFilteredSubjects": "No subjects match this filter.",
     "notes": "Notes",
-    "notesPlaceholder": "Notes, exam warnings, concepts to revise..."
+    "notesPlaceholder": "Notes, exam warnings, concepts to revise...",
+    "filters": {
+      "all": "All",
+      "urgent": "Urgent",
+      "upcoming": "Next 30 days",
+      "missingExam": "Missing exam date",
+      "notStarted": "Not started"
+    },
+    "examSummary": {
+      "total": "Upcoming exams",
+      "next": "Nearest exam",
+      "missing": "Missing exam dates",
+      "daysLeft": "{{count}} days left",
+      "none": "None yet",
+      "missingHint": "Add exam dates to finish setup",
+      "complete": "All subjects covered"
+    }
   },
   "auth": {
     "studyPathCloud": "StudyPath cloud",
@@ -246,6 +263,9 @@
     "progress": "Progress",
     "nextClass": "Next Class",
     "nextExam": "Next {{examType}}",
+    "daysUntilExam": "Exam in {{count}} days",
+    "examToday": "Exam today",
+    "noExamDate": "Missing exam date",
     "writtenExam": "Written Exam",
     "lecturer": "Lecturer:",
     "room": "Room:",

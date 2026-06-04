@@ -131,8 +131,25 @@
     "status": "สถานะ",
     "videosWatched": "วิดีโอที่ชมแล้ว",
     "noSubjects": "ยังไม่มีวิชา สร้างวิชาหนึ่งเพื่อเริ่มต้น",
+    "noFilteredSubjects": "ไม่มีวิชาที่ตรงกับตัวกรองนี้",
     "notes": "หมายเหตุ",
-    "notesPlaceholder": "หมายเหตุ คำเตือนการสอบ แนวคิดในการทบทวน..."
+    "notesPlaceholder": "หมายเหตุ คำเตือนการสอบ แนวคิดในการทบทวน...",
+    "filters": {
+      "all": "ทั้งหมด",
+      "urgent": "ใกล้สอบ",
+      "upcoming": "สอบใน 30 วัน",
+      "missingExam": "ยังไม่ตั้งวันสอบ",
+      "notStarted": "ยังไม่เริ่ม"
+    },
+    "examSummary": {
+      "total": "สอบที่กำลังจะมา",
+      "next": "สอบใกล้สุด",
+      "missing": "ยังไม่ตั้งวันสอบ",
+      "daysLeft": "เหลือ {{count}} วัน",
+      "none": "ยังไม่มี",
+      "missingHint": "ควรเพิ่มวันสอบให้ครบ",
+      "complete": "ครบทุกวิชาแล้ว"
+    }
   },
   "auth": {
     "studyPathCloud": "StudyPath บนคลาวด์",
@@ -246,6 +263,9 @@
     "progress": "ความคืบหน้า",
     "nextClass": "ชั้นเรียนถัดไป",
     "nextExam": "การสอบ{{examType}}ถัดไป",
+    "daysUntilExam": "สอบอีก {{count}} วัน",
+    "examToday": "สอบวันนี้",
+    "noExamDate": "ยังไม่ตั้งวันสอบ",
     "writtenExam": "การสอบเขียน",
     "lecturer": "ผู้สอน:",
     "room": "ห้อง:",
