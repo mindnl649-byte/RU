@@ -186,6 +186,9 @@
     "newSemester": "+ ภาคเรียนใหม่",
     "semesterTitle": "ภาคเรียนใหม่",
     "nameExample": "เช่น ภาคเรียน 1/2025",
+    "daysUntilExamMonth": "เหลือ {{count}} วันถึงเดือนสอบ",
+    "examMonthNow": "อยู่ในเดือนสอบ",
+    "examMonthPassed": "ผ่านเดือนสอบแล้ว",
     "cancel": "ยกเลิก",
     "create": "สร้าง"
   },

@@ -186,6 +186,9 @@
     "newSemester": "+ New Semester",
     "semesterTitle": "New Semester",
     "nameExample": "e.g., Semester 1/2025",
+    "daysUntilExamMonth": "{{count}} days until exam month",
+    "examMonthNow": "Exam month is now",
+    "examMonthPassed": "Exam month has passed",
     "cancel": "Cancel",
     "create": "Create"
   },
