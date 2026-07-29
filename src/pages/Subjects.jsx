@@ -9,6 +9,7 @@ import { SubjectEditDrawer } from "../components/SubjectEditDrawer.jsx";
 import { getActiveSemester } from "../utils/semesters.js";
 
 const FILTERS = ["all", "urgent", "upcoming", "missingExam", "notStarted"];
+const SORT_MODES = ["examDate", "code", "lowProgress"];
 
 export function Subjects({
   studyState,
@@ -32,6 +33,7 @@ export function Subjects({
   const [editingSubject, setEditingSubject] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // "cards" or "checklist"
   const [filter, setFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("examDate");
 
   // Support both old and new data structures
   const useNewSystem = studyState?.semesters && Object.keys(studyState.semesters).length > 0;
@@ -48,6 +50,7 @@ export function Subjects({
   const subjects = getSubjects();
   const examSummary = getExamSummary(subjects);
   const filteredSubjects = subjects.filter((subject) => matchesSubjectFilter(subject, filter));
+  const visibleSubjects = sortSubjects(filteredSubjects, sortMode);
   const activeSemester = studyState?.semesters
     ? getActiveSemester(studyState.semesters, studyState.activeSemesterId)
     : null;
@@ -176,11 +179,37 @@ export function Subjects({
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink-900/10 bg-paper-50 p-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-500">
+            {t("subjects.sort.label")}
+          </p>
+          <p className="mt-1 text-sm text-ink-600">
+            {sortMode === "examDate" ? t("subjects.sort.examDateHint") : t("subjects.sort.defaultHint")}
+          </p>
+        </div>
+        <div className="flex gap-2 overflow-x-auto">
+          {SORT_MODES.map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setSortMode(mode)}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                sortMode === mode
+                  ? "bg-amber-500 text-ink-900 shadow-lifted"
+                  : "border border-ink-900/10 bg-paper-100 text-ink-600 hover:bg-paper-200"
+              }`}
+            >
+              {t(`subjects.sort.${mode}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Grid View */}
       {viewMode === "cards" && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence>
-            {filteredSubjects.length === 0 ? (
+            {visibleSubjects.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -191,7 +220,7 @@ export function Subjects({
                 </p>
               </motion.div>
             ) : (
-              filteredSubjects.map((subject) => (
+              visibleSubjects.map((subject) => (
                 <SubjectCard
                   key={subject.id || subject.code}
                   subject={subject}
@@ -208,7 +237,7 @@ export function Subjects({
       {/* Checklist View - Legacy */}
       {viewMode === "checklist" && !useNewSystem && (
         <div className="space-y-4">
-          {filteredSubjects.map((subject) => (
+          {visibleSubjects.map((subject) => (
             <motion.article
               key={subject.code}
               initial={{ opacity: 0, y: 12 }}
@@ -293,7 +322,7 @@ export function Subjects({
       {/* Checklist View - New System */}
       {viewMode === "checklist" && useNewSystem && subjects.length > 0 && (
         <div className="space-y-4">
-          {filteredSubjects.map((subject) => (
+          {visibleSubjects.map((subject) => (
             <motion.div
               key={subject.id}
               initial={{ opacity: 0, y: 12 }}
@@ -467,6 +496,36 @@ function matchesSubjectFilter(subject, filter) {
   if (filter === "missingExam") return !isCompleted(subject) && !exam;
   if (filter === "notStarted") return subject.status === "not started";
   return true;
+}
+
+function sortSubjects(subjects, sortMode) {
+  return [...subjects].sort((a, b) => {
+    if (sortMode === "examDate") {
+      const aExam = getUpcomingExam(a);
+      const bExam = getUpcomingExam(b);
+
+      if (aExam && bExam) {
+        return aExam.daysUntil - bExam.daysUntil || (aExam.exam.start || "").localeCompare(bExam.exam.start || "") || compareCode(a, b);
+      }
+
+      if (aExam) return -1;
+      if (bExam) return 1;
+      return compareCode(a, b);
+    }
+
+    if (sortMode === "lowProgress") {
+      return Number(a.progress || 0) - Number(b.progress || 0) || compareCode(a, b);
+    }
+
+    return compareCode(a, b);
+  });
+}
+
+function compareCode(a, b) {
+  return String(a.code || "").localeCompare(String(b.code || ""), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
 }
 
 function getUpcomingExam(subject) {

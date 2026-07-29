@@ -141,6 +141,14 @@
       "missingExam": "Missing exam date",
       "notStarted": "Not started"
     },
+    "sort": {
+      "label": "Sort subjects",
+      "examDate": "Nearest exam first",
+      "code": "Subject code",
+      "lowProgress": "Lowest progress",
+      "examDateHint": "Subjects with the nearest upcoming exam appear first.",
+      "defaultHint": "Change the order without changing your saved subject data."
+    },
     "examSummary": {
       "total": "Upcoming exams",
       "next": "Nearest exam",
