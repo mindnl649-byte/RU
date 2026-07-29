@@ -10,6 +10,7 @@ import { Roadmap } from "./pages/Roadmap.jsx";
 import { Subjects } from "./pages/Subjects.jsx";
 import { Timer } from "./pages/Timer.jsx";
 import { Calendar } from "./pages/Calendar.jsx";
+import { PrepPlan } from "./pages/PrepPlan.jsx";
 
 export function App() {
   const { t } = useTranslation();
@@ -57,6 +58,7 @@ export function App() {
       duplicateSubject,
       getActiveSubjects,
     };
+    if (activePage === "prep") return <PrepPlan {...shared} />;
     if (activePage === "subjects") return <Subjects {...shared} />;
     if (activePage === "calendar") return <Calendar {...shared} />;
     if (activePage === "roadmap") return <Roadmap {...shared} />;

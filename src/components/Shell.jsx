@@ -4,6 +4,7 @@ import { LanguageSwitcher } from "./LanguageSwitcher.jsx";
 
 const NAV_ITEMS_CONFIG = [
   { id: "today", labelKey: "nav.today", icon: "T" },
+  { id: "prep", labelKey: "nav.prep", icon: "P" },
   { id: "subjects", labelKey: "nav.subjects", icon: "S" },
   { id: "calendar", labelKey: "nav.calendar", icon: "📅" },
   { id: "roadmap", labelKey: "nav.roadmap", icon: "R" },
@@ -54,11 +55,11 @@ export function Shell({ activePage, children, setActivePage, syncStatus, user })
         </AnimatePresence>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto grid h-16 max-w-md grid-cols-5 border-t border-ink-900/10 bg-paper-100/95 px-2 backdrop-blur lg:hidden">
-        {NAV_ITEMS_CONFIG.slice(0, 5).map((item) => (
+      <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto flex h-16 max-w-md gap-1 overflow-x-auto border-t border-ink-900/10 bg-paper-100/95 px-2 backdrop-blur lg:hidden">
+        {NAV_ITEMS_CONFIG.map((item) => (
           <button
             key={item.id}
-            className={`grid place-items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+            className={`grid min-w-16 flex-1 place-items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide ${
               activePage === item.id ? "text-amber-500" : "text-ink-400"
             }`}
             onClick={() => setActivePage(item.id)}
