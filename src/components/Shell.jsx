@@ -4,7 +4,6 @@ import { LanguageSwitcher } from "./LanguageSwitcher.jsx";
 
 const NAV_ITEMS_CONFIG = [
   { id: "today", labelKey: "nav.today", icon: "T" },
-  { id: "prep", labelKey: "nav.prep", icon: "P" },
   { id: "subjects", labelKey: "nav.subjects", icon: "S" },
   { id: "calendar", labelKey: "nav.calendar", icon: "📅" },
   { id: "roadmap", labelKey: "nav.roadmap", icon: "R" },
